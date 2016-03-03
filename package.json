@@ -1,0 +1,20 @@
+{
+  "name": "ds-cloud-state",
+  "version": "0.1.0",
+  "description": "",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Alexey Zorkaltsev (alexey@zorkaltsev.com)",
+  "license": "ISC",
+  "devDependencies": {
+    "bluebird": "^3.1.5",
+    "coffee-script": "^1.10.0",
+    "ds-gulp-builder": "^0.1.0",
+    "gulp": "^3.9.0",
+    "gulp-docco": "0.0.4",
+    "ramda": "^0.19.1",
+    "socket.io": "^1.4.5",
+    "socket.io-client": "^1.4.5"
+  }
+}

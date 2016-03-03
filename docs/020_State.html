@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>020_State.litcoffee</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+    <ul class="sections">
+        
+          <li id="title">
+              <div class="annotation">
+                  <h1>020_State.litcoffee</h1>
+              </div>
+          </li>
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              <p>В связи с тем, что socket.io-client может выполнять reconnect, то вместо начальной идеи, что clone создается
+при подключении к origin-объекту.  И в случае пропадания связи с origin clone-объект переходит в состояние
+disconnected, и всё.  Мы переходим к варианту, когда clone-объект создается и пытается подключиться к origin, при
+подключении у него меняется состояние.  И соотвественно в случае reconnect он переходит в состояние reconnecting,
+что означает что он может в любой момент снова обновить своё состояние.</p>
+<p>Основная проблема при reconnect, это то что мы должны понимать пропустили ли мы какие нибудь события.  При быстром
+reconnect мы можем передать пропущенные изменнеия, если они у нас некоторое время хранятся в дополнительной очереди.</p>
+<p>При длительном reconnect скорее всего потребуется передать полное состояние.  Очевидно, что передача полного состояния
+становится таким же обновлением как и все другие, и происходит при начально подключении и после длительного reconnect.</p>
+<p>Чтоб понимать, сколько событий было пропущено при reconnect мы должны добавить revision к состоянию, чтоб он
+увеличивался на единицы при каждом обновлении.  Если передавать revision вместе с обновлениями, то можно его
+использовать так же для контроля качества работы socket.io - не случаются ли пропуски состояния.</p>
+<p>Статусы clone-объекта, те же что будут в новой версии JSApp для DSSet:</p>
+<ul>
+<li>$ds_ready - true, есть загруженные данные</li>
+<li>$ds_loading - true, если данные загружаются</li>
+</ul>
+<p>У origin-объекта всегда статус $ds_ready = true и $ds_loading = false, так как ему не важно подключается к нему clone-объекты или нет.  А статус ему нужен, чтоб
+по интерфейсу не отличаться от clone-объектов.</p>
+
+            </div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>

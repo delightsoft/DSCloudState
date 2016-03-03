@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>Управление камера через веб-интерфейс студии</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+    <ul class="sections">
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              <h1 id="-">Управление камера через веб-интерфейс студии</h1>
+<p>Одна из интересных задач для CloudState, в рамках концепции AngularTV - это реализовать следующую схему:</p>
+<p>Есть два типа серверов: сервер-камера, где происходит сбор данных и сервер-студия, куда передаются данные и откуда они
+передаются на пользовательский интерфейс (web-панель или административный).  При этом сервер-студия имеет публичный
+сетевой адрес, а сервер-камера может находиться в закрытой подсети.  Камеры могут подключаться к студии в любой момент.
+Одновременно может быть подключено несколько камер.</p>
+<p>Оригинал данных камеры находится на сервере-камера, потому он должна подключиться (connect) к серверу-студии, которые
+должен слушать (listen) новые камеры. При подключении новой камеры, на сервере-студии создается клон новой камеры,
+который добавляется в список камер в студии</p>
+<p>Оригинал списка камер находится на сервере-студии.  Он доступен для клонирования на веб интерфейс (angular-приложение).
+В списке камер видно название камер и адрес по которому можно на неё подписать на студии.  По факту это мы клонируем на
+UI состояние клона камеры на сервере-студии.</p>
+<p>Важно, что при вызове команды на клоне камеры в UI, команда выполнялись на сервере-камере, на котором находится оригинал
+камеры.</p>
+<p>TODO: Одна камера может цепляться к нескольким студиям
+TODO: Любой listen и connect можно отключить через вызов обратной функции</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>
+<span class="hljs-built_in">require</span> <span class="hljs-string">'./_globals'</span>
+CloudState = <span class="hljs-built_in">require</span> <span class="hljs-string">'../src/CloudState'</span>
+
+fdescribe <span class="hljs-string">'100 Camera Studio UI:'</span>, <span class="hljs-function">-&gt;</span>
+
+  <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Camera</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">CloudState</span></span>
+
+    constructor: <span class="hljs-function">-&gt;</span>
+      <span class="hljs-keyword">super</span>()
+      @started = <span class="hljs-literal">false</span>
+      @frames = []
+      <span class="hljs-keyword">return</span>
+
+    @setters
+
+      start: <span class="hljs-function"><span class="hljs-params">(v)</span> -&gt;</span>
+        @started = v
+        <span class="hljs-keyword">return</span>
+
+      addFrame: <span class="hljs-function"><span class="hljs-params">(frame)</span> -&gt;</span>
+        @frames.push frame
+        @frames.unshift <span class="hljs-keyword">if</span> @frames.length &gt; <span class="hljs-number">10</span>
+        <span class="hljs-keyword">return</span>
+
+    start: <span class="hljs-function">-&gt;</span> @_start <span class="hljs-literal">true</span>; <span class="hljs-keyword">return</span>
+
+    stop: <span class="hljs-function">-&gt;</span> @_start <span class="hljs-literal">false</span>; <span class="hljs-keyword">return</span>
+
+    @makeOriginAndClone()</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p>Для тестов, готовим два сокета, соединенных между собой</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  afterEach (done) -&gt;
+
+    <span class="hljs-built_in">require</span>(<span class="hljs-string">'./_pairSockets'</span>).cleanUp @, done
+
+  beforeEach (done) -&gt;
+
+    count = <span class="hljs-number">2</span><span class="hljs-function">
+
+    <span class="hljs-title">end</span> = =&gt;</span>
+
+      done() <span class="hljs-keyword">if</span> --count == <span class="hljs-number">0</span>
+
+      <span class="hljs-keyword">return</span>
+
+    <span class="hljs-built_in">require</span>(<span class="hljs-string">'./_pairSockets'</span>) @, end
+    .add <span class="hljs-string">'socketA'</span>, <span class="hljs-string">'socketB'</span>
+    .add <span class="hljs-string">'socketC'</span>, <span class="hljs-string">'socketD'</span>
+    .add <span class="hljs-string">'socketE'</span>, <span class="hljs-string">'socketF'</span>
+
+    @origin = <span class="hljs-keyword">new</span> Camera.Origin
+
+    @clone = <span class="hljs-keyword">new</span> Camera.Clone
+
+    @clone2 = <span class="hljs-keyword">new</span> Camera.Clone
+
+    end()</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <p>Просто подключение Clone к Origin</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  it <span class="hljs-string">'010'</span>, <span class="hljs-function"><span class="hljs-params">(done)</span> -&gt;</span>
+
+    <span class="hljs-built_in">require</span>(<span class="hljs-string">'./_specSteps'</span>) @, done, <span class="hljs-literal">true</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <p>Создаем оригинал</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    .step -&gt; <span class="hljs-comment"># 1</span>
+
+      @origin._addFrame <span class="hljs-string">'frame 1'</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <p>Clone-состояние подключаетс к Origin</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    .step <span class="hljs-comment"># 2</span>
+
+      action: <span class="hljs-function">-&gt;</span>
+
+        @origin.__addClone @socketA
+
+        @clone.__setOrigin @socketB</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <p>Клон получает полное состояни от Origin</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      expect: <span class="hljs-function"><span class="hljs-params">(done)</span> -&gt;</span>
+
+        unwatch = @clone.__watch <span class="hljs-string">'_wholeState'</span>, <span class="hljs-function">-&gt;</span>
+
+          expect(@_ready).toBeTruthy()
+          expect(@_connected).toBeTruthy()
+
+          expect(@started).toBeFalsy()
+          expect(@frames).toEqual [<span class="hljs-string">'frame 1'</span>]
+
+          unwatch(); done()</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
+              <p>Когда изменения вносятся в Origin</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    .step <span class="hljs-comment"># 3</span>
+
+      action: <span class="hljs-function">-&gt;</span>
+
+        @origin._addFrame <span class="hljs-string">'frame 2'</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-8">&#182;</a>
+              </div>
+              <p>На Origin получаем сообщение об изменении состоянии</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      expect: <span class="hljs-function"><span class="hljs-params">(done1, done2)</span> -&gt;</span>
+
+        unwatchOrigin = @origin.__watch <span class="hljs-string">'addFrame'</span>, <span class="hljs-function"><span class="hljs-params">(setter, data)</span> -&gt;</span>
+
+          expect(setter).toBe <span class="hljs-string">'addFrame'</span>
+          expect(data).toBe <span class="hljs-string">'frame 2'</span>
+
+          unwatchOrigin(); done1()</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-9">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-9">&#182;</a>
+              </div>
+              <p>Такое же сообщение мы видим на Clone</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        unwatchClone = @clone.__watch <span class="hljs-string">'addFrame'</span>, <span class="hljs-function"><span class="hljs-params">(setter, data)</span> -&gt;</span>
+
+          expect(setter).toBe <span class="hljs-string">'addFrame'</span>
+          expect(data).toBe <span class="hljs-string">'frame 2'</span>
+
+          unwatchClone(); done2()</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-10">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-10">&#182;</a>
+              </div>
+              <p>Если мы выполняем команду на Clone</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    .step <span class="hljs-comment"># 4</span>
+
+      action: <span class="hljs-function">-&gt;</span>
+
+        @clone.start()</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-11">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-11">&#182;</a>
+              </div>
+              <p>Команда выполняет на Origin</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      expect: <span class="hljs-function"><span class="hljs-params">(done1, done2, done3)</span> -&gt;</span>
+
+        <span class="hljs-built_in">require</span>(<span class="hljs-string">'./_catchMethod'</span>) @origin, <span class="hljs-string">'start'</span>, done1</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-12">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-12">&#182;</a>
+              </div>
+              <p>И приводит к соотвествующим изменениям на Origin и Clone</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        unwatchOrigin = @origin.__watch <span class="hljs-string">'start'</span>, <span class="hljs-function"><span class="hljs-params">(setter, data)</span> -&gt;</span>
+
+          expect(setter).toBe <span class="hljs-string">'start'</span>
+          expect(data).toBe <span class="hljs-literal">true</span>
+
+          unwatchOrigin(); done2()
+
+        unwatchClone = @clone.__watch <span class="hljs-string">'start'</span>, <span class="hljs-function"><span class="hljs-params">(setter, data)</span> -&gt;</span>
+
+          expect(setter).toBe <span class="hljs-string">'start'</span>
+          expect(data).toBe <span class="hljs-literal">true</span>
+
+          unwatchClone(); done3()
+
+    .step <span class="hljs-comment"># 5</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-13">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-13">&#182;</a>
+              </div>
+              <p>Теперь подключаем clone к clone’у</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      action: <span class="hljs-function">-&gt;</span>
+
+        @clone.__addClone @socketC
+
+        @clone2.__setOrigin @socketD</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-14">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-14">&#182;</a>
+              </div>
+              <p>Состояние с clone копируется на clone2</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      expect: <span class="hljs-function"><span class="hljs-params">(done)</span> -&gt;</span>
+
+        unwatch = @clone2.__watch <span class="hljs-string">'_wholeState'</span>, <span class="hljs-function">-&gt;</span>
+
+          expect(@_ready).toBeTruthy()
+          expect(@_connected).toBeTruthy()
+
+          expect(@started).toBeTruthy()
+          expect(@frames).toEqual [<span class="hljs-string">'frame 1'</span>, <span class="hljs-string">'frame 2'</span>]
+
+          unwatch(); done()
+
+    .step <span class="hljs-comment"># 6</span>
+
+      action: <span class="hljs-function">-&gt;</span>
+
+        @clone2.stop()</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-15">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-15">&#182;</a>
+              </div>
+              <p>Команда выполняет на Origin</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      expect: <span class="hljs-function"><span class="hljs-params">(done1, done2, done3, done4)</span> -&gt;</span>
+
+        <span class="hljs-built_in">require</span>(<span class="hljs-string">'./_catchMethod'</span>) @origin, <span class="hljs-string">'stop'</span>, done1</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-16">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-16">&#182;</a>
+              </div>
+              <p>И приводит к соотвествующим изменениям на Origin и Clone</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        unwatchOrigin = @origin.__watch <span class="hljs-string">'start'</span>, <span class="hljs-function"><span class="hljs-params">(setter, data)</span> -&gt;</span>
+
+          expect(setter).toBe <span class="hljs-string">'start'</span>
+          expect(data).toBe <span class="hljs-literal">false</span>
+
+          unwatchOrigin(); done2()
+
+        unwatchClone = @clone.__watch <span class="hljs-string">'start'</span>, <span class="hljs-function"><span class="hljs-params">(setter, data)</span> -&gt;</span>
+
+          expect(setter).toBe <span class="hljs-string">'start'</span>
+          expect(data).toBe <span class="hljs-literal">false</span>
+
+          unwatchClone(); done3()
+
+        unwatchClone2 = @clone2.__watch <span class="hljs-string">'start'</span>, <span class="hljs-function"><span class="hljs-params">(setter, data)</span> -&gt;</span>
+
+          expect(setter).toBe <span class="hljs-string">'start'</span>
+          expect(data).toBe <span class="hljs-literal">false</span>
+
+          unwatchClone2(); done4()</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-17">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-17">&#182;</a>
+              </div>
+              <p>Если отключить связь межд @clone и @origin</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    .step <span class="hljs-comment"># 7</span>
+
+      action: <span class="hljs-function">-&gt;</span>
+
+        @socketA.disconnect()</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-18">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-18">&#182;</a>
+              </div>
+              <p>то @clone и @clone2 перейдут в состояние <code>__connected == false</code></p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      expect: <span class="hljs-function"><span class="hljs-params">(done1, done2)</span> -&gt;</span>
+
+        unwatchClone = @clone.__watch <span class="hljs-string">'_connected'</span>, <span class="hljs-function">-&gt;</span>
+
+          expect(@_connected).toBeFalsy()
+
+          unwatchClone(); done1()
+
+        unwatchClone2 = @clone2.__watch <span class="hljs-string">'_connected'</span>, <span class="hljs-function">-&gt;</span>
+
+          expect(@_connected).toBeFalsy()
+
+          unwatchClone2(); done2()</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-19">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-19">&#182;</a>
+              </div>
+              <p>TODO: Добавить изменение состояния пока камера отключена</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>
+    .step <span class="hljs-comment"># 8</span>
+
+      action: <span class="hljs-function">-&gt;</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-20">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-20">&#182;</a>
+              </div>
+              <p>TODO: Нужно ли поддерживать режим, когда мы делаем setOrigin раньше чем на другом конце происходит addClone</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>
+        @origin.__addClone @socketE
+
+        @clone.__setOrigin @socketF
+
+      expect: <span class="hljs-function"><span class="hljs-params">(done1, done2)</span> -&gt;</span>
+
+        unwatchClone = @clone.__watch <span class="hljs-string">'_connected'</span>, <span class="hljs-function">-&gt;</span>
+
+          expect(@_connected).toBeTruthy()
+
+          unwatchClone(); done1()
+
+        unwatchClone2 = @clone2.__watch <span class="hljs-string">'_connected'</span>, <span class="hljs-function">-&gt;</span>
+
+          expect(@_connected).toBeTruthy()
+
+          unwatchClone2(); done2()</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>_pairSockets.litcoffee</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+    <ul class="sections">
+        
+          <li id="title">
+              <div class="annotation">
+                  <h1>_pairSockets.litcoffee</h1>
+              </div>
+          </li>
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              <p>Для тестирования сетевых соединений, необходимо иметь пары объектов socket.io соединеных между собой.  Пар может быть
+несколько штук.  Важно, чтоб после окончания теста сокеты были корректно закрыты.</p>
+<p>Если true - тестируем на реальных объектах socket.io.  При этом тесты на reconnect не сработают.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>useRealSockets = <span class="hljs-literal">false</span>
+
+port = <span class="hljs-number">3390</span>
+
+socketIO = <span class="hljs-built_in">require</span> <span class="hljs-string">'socket.io'</span>
+socketIOClient = <span class="hljs-built_in">require</span> <span class="hljs-string">'socket.io-client'</span>
+socketIOMock = <span class="hljs-built_in">require</span> <span class="hljs-string">'./_socket.io-mock'</span>
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">PairSockets</span></span>
+
+    constructor: <span class="hljs-function"><span class="hljs-params">(@context, @done)</span> -&gt;</span>
+
+      @count = <span class="hljs-number">0</span>
+
+      <span class="hljs-keyword">return</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p>Добавляем пару сокетов, с именами name1 и name2 в контексте теста.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    add: <span class="hljs-function"><span class="hljs-params">(name1, name2)</span> -&gt;</span>
+
+      @count += <span class="hljs-number">2</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <p>Создаем пару socket.io сокетов.  Используя порты начиная с порта startPort.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      <span class="hljs-keyword">if</span> useRealSockets
+
+        serverSocket = @context.__serverSocket ?= socketIO(port)
+
+        serverSocket.<span class="hljs-keyword">of</span>(<span class="hljs-string">"/<span class="hljs-subst">#{name1}</span>"</span>).<span class="hljs-literal">on</span> <span class="hljs-string">'connection'</span>, <span class="hljs-function"><span class="hljs-params">(socket1)</span> =&gt;</span>
+
+          @context[name1] = socket1
+
+          (sockets = (@context.__sockets ?= [])).push socket1
+
+          sockets.push socket2
+
+          @done() <span class="hljs-keyword">if</span> --@count == <span class="hljs-number">0</span>
+
+          <span class="hljs-keyword">return</span>
+
+        (@context[name2] = socket2 = socketIOClient.connect(<span class="hljs-string">"http://localhost:<span class="hljs-subst">#{port}</span>/<span class="hljs-subst">#{name1}</span>"</span>)).<span class="hljs-literal">on</span> <span class="hljs-string">'connect'</span>, <span class="hljs-function">=&gt;</span>
+
+          @done() <span class="hljs-keyword">if</span> --@count == <span class="hljs-number">0</span>
+
+          <span class="hljs-keyword">return</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <p>Создаем пару mock-сокетов.  Они работают без создания реального сетевого соединения.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      <span class="hljs-keyword">else</span>
+
+        socketIOMock = @context.socketIOMock ?= <span class="hljs-keyword">new</span> socketIOMock()
+
+        socketIOMock.<span class="hljs-keyword">of</span>(<span class="hljs-string">"/<span class="hljs-subst">#{name1}</span>"</span>).<span class="hljs-literal">on</span> <span class="hljs-string">'connection'</span>, <span class="hljs-function"><span class="hljs-params">(socket1)</span> =&gt;</span>
+
+          @context[name1] = socket1
+
+          (sockets = (@context.__sockets ?= [])).push socket1
+
+          sockets.push socket2
+
+          @done() <span class="hljs-keyword">if</span> --@count == <span class="hljs-number">0</span>
+
+          <span class="hljs-keyword">return</span>
+
+        ((@context[name2] = socket2 = <span class="hljs-keyword">new</span> socketIOMock.Client).connect <span class="hljs-string">"/<span class="hljs-subst">#{name1}</span>"</span>).<span class="hljs-literal">on</span> <span class="hljs-string">'connect'</span>, <span class="hljs-function">=&gt;</span>
+
+          @done() <span class="hljs-keyword">if</span> --@count == <span class="hljs-number">0</span>
+
+          <span class="hljs-keyword">return</span>
+
+      @ <span class="hljs-comment"># add:</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <p>Возвращаем метод, который возвращает новый instance класса PairSocket</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-built_in">module</span>.exports = func =  <span class="hljs-function"><span class="hljs-params">(context, done)</span> -&gt;</span>
+
+      <span class="hljs-keyword">new</span> PairSockets context, done</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <p>Добавляем статический метод cleanUp - который корректно закрывает сокеты запомненые в переменно
+__sockets в контекте теста.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    func.cleanUp = <span class="hljs-function"><span class="hljs-params">(context, done)</span> =&gt;</span>
+
+      count = <span class="hljs-number">0</span><span class="hljs-function">
+
+      <span class="hljs-title">end</span> = -&gt;</span>
+
+        <span class="hljs-keyword">if</span> --count == <span class="hljs-number">0</span>
+
+          serverSocket.close() <span class="hljs-keyword">if</span> (serverSocket = context.__serverSocket)
+                        
+          done()
+
+        <span class="hljs-keyword">return</span> <span class="hljs-comment"># end =</span>
+
+      <span class="hljs-keyword">for</span> socket, i <span class="hljs-keyword">in</span> (sockets = context.__sockets) <span class="hljs-keyword">by</span> <span class="hljs-number">2</span> <span class="hljs-keyword">when</span> socket.connected
+
+        count += <span class="hljs-number">2</span>
+
+        socket.<span class="hljs-literal">on</span> <span class="hljs-string">'disconnect'</span>, end
+
+        sockets[i + <span class="hljs-number">1</span>].<span class="hljs-literal">on</span> <span class="hljs-string">'disconnect'</span>, end
+
+        socket.disconnect()
+
+      <span class="hljs-keyword">return</span></pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>

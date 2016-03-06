@@ -1,5 +1,7 @@
 # TODO: Add state object name, so I could distinguish them
 
+global = @
+
 module.exports = class CloudState
 
   constructor: (->
@@ -156,6 +158,7 @@ module.exports = class CloudState
       parent = @
 
       _rootScope = null
+      _rootScopeExist = false
 
       __addClone: (socket) ->
 
@@ -197,7 +200,11 @@ module.exports = class CloudState
             for watcher in watchers[name]
               watcher.apply @, args
 
-        if (_rootScope ?= (GLOBAL || window)._rootScope) && !_rootScope.$$phase
+        if not _rootScopeExist
+          _rootScope = global._rootScope
+          _rootScopeExist = true
+
+        if _rootScope && !_rootScope.$$phase
           _rootScope.$digest()
 
         return
